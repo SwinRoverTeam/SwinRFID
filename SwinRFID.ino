@@ -1,5 +1,5 @@
 #include <SPI.h>
-#include "mcp_canbus.h"
+#include <mcp_can.h>
 
 #include <MFRC522.h>
 
@@ -184,7 +184,7 @@ void addByteToMessage(unsigned char msg[][8], int &m, int &c, byte valueBlock){
 }
 
 void sendRFIDMessage(unsigned char buf[8]) {
-  CAN.sendMsgBuf(0x00, CANBED_ID, 8, buf);
+  CAN.sendMsgBuf(CANBED_ID, 0, 8, buf);
 }
 
 
