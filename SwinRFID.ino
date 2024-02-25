@@ -1,5 +1,5 @@
 #include <SPI.h>
-#include <mcp_can.h>
+#include <mcp_canbus.h>
 
 #include <MFRC522.h>
 
@@ -23,8 +23,9 @@
 //challenge config
 
 const int SECTOR_COUNT = 16;
-const int VALUE_BLOCK_A = 1;
-const int VALUE_BLOCK_B = 2;
+const int VALUE_BLOCK_A = 0;
+const int VALUE_BLOCK_B = 1;
+const int VALUE_BLOCK_C = 2;
 const int TRAILER_BLOCK = 3;
 //constants
 const int SPI_CS_PIN = 17;
@@ -93,8 +94,9 @@ void loop() {
   //  * The RFID card contains 64 blocks of 16 hexadecimal bytes.
   for(int i = 0; i < SECTOR_COUNT; i++) {
     byte sector = i;
-    byte valueBlockA = i*4+VALUE_BLOCK_A;
+    byte valueBlockA = i* 4+VALUE_BLOCK_A;
     byte valueBlockB = i*4+VALUE_BLOCK_B;
+    byte valueBlockC = i*4+VALUE_BLOCK_C;
     // Every fourth Block (3, 7, 11, and so on) are sector trailers which contain access
     byte trailerBlock = i*4+TRAILER_BLOCK;
     MFRC522::StatusCode status;
@@ -157,8 +159,10 @@ void loop() {
     formatValueBlock(valueBlockA);
     formatValueBlock(valueBlockB);
 
+
     addByteToMessage(msg, m, c, valueBlockA);
     addByteToMessage(msg, m, c, valueBlockB);
+    addByteToMessage(msg, m, c, valueBlockC);
 
 
   }
