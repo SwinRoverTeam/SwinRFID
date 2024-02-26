@@ -1,5 +1,5 @@
 #include <SPI.h>
-#include <mcp_canbus.h>
+#include <mcp_can.h>
 
 #include <MFRC522.h>
 
@@ -29,7 +29,7 @@ const int VALUE_BLOCK_C = 2;
 const int TRAILER_BLOCK = 3;
 //constants
 const int SPI_CS_PIN = 17;
-const int RESET_PIN = 5;
+const int RESET_PIN = 9;
 const unsigned char CANBED_ID = 0x09;
 //filters
 const unsigned char REC_FILTER_ID = 0x04;
