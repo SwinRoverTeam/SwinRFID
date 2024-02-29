@@ -1,8 +1,11 @@
 #include <SPI.h>
 #include <MFRC522.h>
+#include <mcp_can.h>
 
 #define RST_PIN         9           // Configurable, see typical pin layout above
 #define SS_PIN          10          // Configurable, see typical pin layout above
+
+#define CAN_CS_PIN      17
 
 
 MFRC522 mfrc522(SS_PIN, RST_PIN);   // Create MFRC522 instance.
@@ -10,13 +13,15 @@ MFRC522 mfrc522(SS_PIN, RST_PIN);   // Create MFRC522 instance.
 byte buffer[18];
 byte block;
 byte input[64][16];
-byte finalArray [47][16];
+byte finalArray[47][16];
 MFRC522::StatusCode status;
 
 
 bool readCard = false;
     
 MFRC522::MIFARE_Key key;
+
+MCP_CAN CAN(CAN_CS_PIN);                                    // Set CS pin
 
 // Number of known default keys (hard-coded)
 // NOTE: Synchronize the NR_KNOWN_KEYS define with the defaultKeys[] array
@@ -35,22 +40,28 @@ byte knownKeys[NR_KNOWN_KEYS][MFRC522::MF_KEY_SIZE] =  {
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);         // Initialize serial communications with the PC
-    while (!Serial);            // Do nothing if no serial port is opened (added for Arduinos based on ATMEGA32U4)
-    SPI.begin();                // Init SPI bus
-    mfrc522.PCD_Init();         // Init MFRC522 card
-    for (byte i = 0; i < 6; i++) {
-      key.keyByte[i] = 0xFF;
+  while (!Serial);            // Do nothing if no serial port is opened (added for Arduinos based on ATMEGA32U4)
+  SPI.begin();                // Init SPI bus
+  mfrc522.PCD_Init();         // Init MFRC522 card
+  for (byte i = 0; i < 6; i++) {
+    key.keyByte[i] = 0xFF;
+  }
+  while (CAN_OK != CAN.begin(CAN_1000KBPS))    // init can bus : baudrate = 500k
+    {
+      Serial.println("CAN BUS FAIL!");
+      delay(100);
     }
+    Serial.println("CAN BUS OK!");
 }
 
-void dump_byte_array_hex(byte *buffer, byte bufferSize) {
+void dump_byte_array_hex(byte *buffer, byte bufferSize) { // Can be removed after testing
   for (byte i = 0; i < bufferSize; i++) {
     Serial.print(buffer[i] < 0x10 ? " 0" : " ");
     Serial.print(buffer[i], HEX);
   }
 }
 
-void dump_byte_array_ASCII(byte *buffer, byte bufferSize) {
+void dump_byte_array_ASCII(byte *buffer, byte bufferSize) { // Can be removed after testing
   for (byte i = 0; i < bufferSize; i++) {
     Serial.print(buffer[i] < 0x10 ? " 0" : " ");
     Serial.write(buffer[i]);
@@ -125,7 +136,7 @@ void loop() {
   //Send over Can
   
 
-  //Reset & allow a new rfid read
+  //Reset & allow a new rfid read eventually
   while(true){}
 }
 
@@ -186,6 +197,37 @@ void filterInput() {
       if (currentByteIndex == 16){
         currentIndex++;
         currentByteIndex = 0;
+      }
+    }
+  }
+}
+
+void transmit() {
+  //Will read and transmit all non \0 bytes
+  bool last = false;
+  unsigned char canMsg[8];
+  int currentCanIndex = 0;
+  for (int block = 0; block < 47; block++) { //Step through each block
+    if (last) { //No more messages need to be sent
+      break;
+    }
+    for (int index = 0; index < 16; index++) { //Step through each index
+      if((char) finalArray[block][index] == 0x0) {
+        last = true;
+      }
+      canMsg[currentCanIndex] = finalArray[block][index];
+      currentCanIndex++;
+      if(currentCanIndex == 7) {
+        currentCanIndex = 0;
+        if (last == false) {
+          canMsg[0] | 0x80; // Adds a one the 128th bit position as a flag for more to come
+        }
+
+        CAN.sendMsgBuf(0x00, 0, 8, canMsg);
+        delay(50);      // send data per 50ms
+        if(last) {
+          break;
+        }
       }
     }
   }
