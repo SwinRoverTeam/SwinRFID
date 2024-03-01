@@ -134,10 +134,21 @@ void loop() {
     Serial.println("");
   }
   //Send over Can
-  
+  transmit();
 
   //Reset & allow a new rfid read eventually
-  while(true){}
+  for (int i = 0; i < 64; i++) {
+    for (int j = 0; j < 16; j++) {
+      input[i][j] = 0x0;
+    }
+  }
+  for (int i = 0; i < 47; i++) {
+    for (int j = 0; j < 16; j++) {
+      finalArray[i][j] = 0x0;
+    }
+  }
+  readCard = false;
+  delay(10000);
 }
 
 bool ReadCard(){ //Read card
@@ -204,27 +215,36 @@ void filterInput() {
 
 void transmit() {
   //Will read and transmit all non \0 bytes
+  Serial.println("transmitting");
   bool last = false;
   unsigned char canMsg[8];
   int currentCanIndex = 0;
   for (int block = 0; block < 47; block++) { //Step through each block
     if (last) { //No more messages need to be sent
+      Serial.println("EOT");
       break;
     }
     for (int index = 0; index < 16; index++) { //Step through each index
-      if((char) finalArray[block][index] == 0x0) {
+      if(finalArray[block][index] == 0x0) {
         last = true;
+        Serial.println("Last transmission");
       }
       canMsg[currentCanIndex] = finalArray[block][index];
       currentCanIndex++;
-      if(currentCanIndex == 7) {
+      if(currentCanIndex == 8) {
         currentCanIndex = 0;
         if (last == false) {
-          canMsg[0] | 0x80; // Adds a one the 128th bit position as a flag for more to come
+          canMsg[0] = canMsg[0] | 0x80; // Adds a one the 128th bit position as a flag for more to come
+          Serial.println(canMsg[0], HEX);
         }
-
-        CAN.sendMsgBuf(0x00, 0, 8, canMsg);
-        delay(50);      // send data per 50ms
+        Serial.println("Transmitting");
+        for (int i = 0; i <8; i++) {
+          Serial.print((char)canMsg[i]);
+          Serial.print(" ");
+        }
+        Serial.println("End of Transmission");
+        CAN.sendMsgBuf(0x09, 0, 8, canMsg);
+        delay(100);      // send data per 50ms
         if(last) {
           break;
         }
