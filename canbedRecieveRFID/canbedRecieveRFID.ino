@@ -33,7 +33,7 @@ void loop()
     {
       bool eot = false;
       CAN.readMsgBuf(&len, buf);    // read data,  len: data length, buf: data buf
-      if (buf[0] & 0x80 == 0x80){
+      if (buf[0] < 128){
         eot = true;
       }
       buf[0] = buf[0] & 0x7F; // Removes more to come bit
@@ -60,6 +60,7 @@ void loop()
         }
         Serial.println("");
         Serial.println(finalMessage);
+        Serial.println("end");
       }
         
     }

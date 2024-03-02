@@ -236,6 +236,7 @@ void transmit() {
         if (last == false) {
           canMsg[0] = canMsg[0] | 0x80; // Adds a one the 128th bit position as a flag for more to come
           Serial.println(canMsg[0], HEX);
+          Serial.println("or-ing with 0x80");
         }
         Serial.println("Transmitting");
         for (int i = 0; i <8; i++) {
