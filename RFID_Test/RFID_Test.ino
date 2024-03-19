@@ -16,6 +16,8 @@ byte input[64][16];
 byte finalArray[47][16];
 MFRC522::StatusCode status;
 
+bool test = false;
+
 
 bool readCard = false;
     
@@ -114,43 +116,6 @@ bool try_key(MFRC522::MIFARE_Key *key)
   return result;
 }
 
-void loop() {
-  // put your main code here, to run repeatedly:
-  while (!readCard) {
-    readCard = ReadCard();
-    delay(100);
-  }
-  //filter
-  filterInput();
-  Serial.println("");
-  for (int i = 0; i < 47; i++) {
-    Serial.print("Block ");
-    Serial.print(i);
-    Serial.print(": ");
-    for (int j = 0; j < 16; j++) {
-      Serial.print((char) finalArray[i][j]);
-      Serial.print(" ");
-    }
-    Serial.println("");
-  }
-  //Send over Can
-  transmit();
-
-  //Reset & allow a new rfid read eventually
-  for (int i = 0; i < 64; i++) {
-    for (int j = 0; j < 16; j++) {
-      input[i][j] = 0x0;
-    }
-  }
-  for (int i = 0; i < 47; i++) {
-    for (int j = 0; j < 16; j++) {
-      finalArray[i][j] = 0x0;
-    }
-  }
-  readCard = false;
-  delay(10000);
-}
-
 bool ReadCard(){ //Read card
   Serial.println("Insert card...");
   // Look for new cards
@@ -244,7 +209,7 @@ void transmit() {
           Serial.print(" ");
         }
         Serial.println("End of Transmission");
-        CAN.sendMsgBuf(0x09, 0, 8, canMsg);
+        CAN.sendMsgBuf(0x307, 0, 8, canMsg);
         delay(100);      // send data per 50ms
         if(last) {
           break;
@@ -252,4 +217,69 @@ void transmit() {
       }
     }
   }
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if (!test) {
+    //filter
+    filterInput();
+    Serial.println("");
+    for (int i = 0; i < 47; i++) {
+      Serial.print("Block ");
+      Serial.print(i);
+      Serial.print(": ");
+      for (int j = 0; j < 16; j++) {
+        Serial.print((char) finalArray[i][j]);
+        Serial.print(" ");
+      }
+      Serial.println("");
+    }
+    while (!readCard) {
+      readCard = ReadCard();
+      delay(100);
+    }
+  }
+  else {
+    String testOutput = "This is a test string, please work!";
+    int numBlocks = (testOutput.length() / 16);
+    int numInLast = (testOutput.length() % 16);
+    //Serial.println(numBlocks);
+    //Serial.println(numInLast);
+    int currentStringPos = 0;
+    for (int i = 0; i <= numBlocks; i++) {
+      for (int j = 0; j < 16; j++) {
+        if (numBlocks*16 + numInLast >= currentStringPos) {
+          finalArray[i][j] = (unsigned char) testOutput.charAt(i*16 + j);
+          //Serial.print("adding char: ");
+          //Serial.println(testOutput.charAt(i*16 + j));
+        }
+        currentStringPos++;
+      }
+    }
+    // for(int i = 0; i < 47; i++) {
+    //   for (int j = 0; j < 16; j++) {
+    //     Serial.print((char) finalArray[i][j]);
+    //   }
+    //   Serial.println("");
+    // }
+    // delay(1000000);
+    delay(100);
+  }
+  //Send over Can
+  transmit();
+
+  //Reset & allow a new rfid read eventually
+  for (int i = 0; i < 64; i++) {
+    for (int j = 0; j < 16; j++) {
+      input[i][j] = 0x0;
+    }
+  }
+  for (int i = 0; i < 47; i++) {
+    for (int j = 0; j < 16; j++) {
+      finalArray[i][j] = 0x0;
+    }
+  }
+  readCard = false;
+  delay(10000);
 }
